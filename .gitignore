@@ -1,0 +1,13 @@
+# .NET Build Output
+[Bb]in/
+[Oo]bj/
+
+# User-specific files (Visual Studio / VS Code)
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.sln.docuser
+
+# Common temporary files
+.DS_Store
