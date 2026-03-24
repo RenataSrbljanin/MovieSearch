@@ -1,5 +1,7 @@
 using System.Net;
+using System.Text.Json;
 using MovieSearch.Application.Exceptions;
+using Serilog;
 
 namespace MovieSearch.Api.Middleware;
 
@@ -18,23 +20,24 @@ public class ErrorHandlingMiddleware
         {
             await _next(context);
         }
-        catch (BadRequestException ex)
-        {
-            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
-        }
-        catch (NotFoundException ex)
-        {
-            context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
-        }
         catch (Exception ex)
         {
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            await context.Response.WriteAsJsonAsync(new { error = "An unexpected error occurred." });
-
-            Console.WriteLine("UNHANDLED ERROR:");
-            Console.WriteLine(ex);
+            Log.Error(ex, "An unexpected error occurred during the request: {Path}.");
+            await HandleExceptionAsync(context, ex);
         }
+    }
+    private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+    {
+        var code = HttpStatusCode.InternalServerError;
+        var result = "An unexpected error occurred.";
+
+        if (exception is NotFoundException) code = HttpStatusCode.NotFound;
+        else if (exception is BadRequestException) code = HttpStatusCode.BadRequest;
+
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = (int)code;
+
+        var response = new { error = exception.Message ?? result };
+        return context.Response.WriteAsync(JsonSerializer.Serialize(response));
     }
 }

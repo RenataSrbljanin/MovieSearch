@@ -11,3 +11,7 @@
 
 # Common temporary files
 .DS_Store
+
+# Logs
+/logs/
+*.log
