@@ -1,8 +1,10 @@
 using Serilog;
 using MovieSearch.Infrastructure.Tmdb;
 using MovieSearch.Application.Interfaces;
-using MovieSearch.Infrastructure.Services;
 using MovieSearch.Api.Middleware;
+using System.Net.Http.Headers;
+using Polly;
+using MovieSearch.Application.Services;
 
 // 1. Konfiguracija Seriloga pre svega ostalog
 Log.Logger = new LoggerConfiguration()
@@ -25,8 +27,31 @@ try
     builder.Services.AddMemoryCache();
 
     // 4. HttpClient za TMDb - Typed Client (Rešava Socket Exhaustion)
-    builder.Services.AddHttpClient<TmdbClient>()
-        .SetHandlerLifetime(TimeSpan.FromMinutes(2)); // Reuse HttpMessageHandler do 2 minuta
+    // Izvlačim opcije ranije da bih ih koristila u konfiguraciji klijenta
+    var tmdbOptions = builder.Configuration.GetSection("Tmdb").Get<TmdbOptions>()
+        ?? throw new InvalidOperationException("TMDB configuration is missing in appsettings.json!");
+
+    builder.Services.AddHttpClient<ITmdbClient, TmdbClient>(client =>
+    {
+        // Konfiguracija klijenta se dešava OVDE, a ne u konstruktoru klase
+        client.BaseAddress = new Uri(tmdbOptions.BaseUrl);
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", tmdbOptions.ApiToken);
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+    })
+    .SetHandlerLifetime(TimeSpan.FromMinutes(2))
+    .AddStandardResilienceHandler(options =>  // OVDE DODAJEM POLLY!
+{
+    // Ovde fino podesavam pravila:
+   
+    options.Retry.MaxRetryAttempts = 3;  // 1. Retry: Ako ne uspe, probaj opet 3 puta
+    options.Retry.Delay = TimeSpan.FromSeconds(2); // Sačekaj 2s pre ponovnog pokušaja
+    options.Retry.BackoffType = DelayBackoffType.Exponential; // Svaki sledeći put čekaj duže (2s, 4s, 8s)
+
+    // 2. Circuit Breaker: Ako TMDB konstantno greši, "isključim osigurač" na neko vreme (30sec)
+    // da ne mučim server koji je očigledno "mrtav"-ovo cuva resurse mog servera
+    options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
+});
 
     // 5. Registracija servisa
     builder.Services.AddScoped<IMovieSearchService, MovieSearchService>();

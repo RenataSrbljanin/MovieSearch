@@ -1,21 +1,17 @@
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
-
+using MovieSearch.Application.Tmdb.Models;
 namespace MovieSearch.Infrastructure.Tmdb;
 
-public class TmdbClient
+public class TmdbClient: ITmdbClient
 {
     private readonly HttpClient _httpClient;
     private readonly JsonSerializerOptions _jsonOptions;
     public TmdbClient(HttpClient httpClient, IOptions<TmdbOptions> options)
     {
         _httpClient = httpClient;
-        _httpClient.BaseAddress = new Uri(options.Value.BaseUrl);
-        _httpClient.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", options.Value.ApiToken);
-        // TMDB koristi snake_case, pa ovo dodajemo da ne bismo morali ručno mapirati svako polje
+        // TMDB koristi snake_case, pa ovo dodajem da ne bih morala ručno mapirati svako polje
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,

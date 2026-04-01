@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace MovieSearch.Infrastructure.Tmdb;
+namespace MovieSearch.Application.Tmdb.Models;
 
 public class TmdbDetailsResponse
 {

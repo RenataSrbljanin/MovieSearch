@@ -2,16 +2,16 @@ using Microsoft.Extensions.Caching.Memory;
 using MovieSearch.Application.Exceptions;
 using MovieSearch.Application.Interfaces;
 using MovieSearch.Application.Models;
-using MovieSearch.Infrastructure.Tmdb;
+using MovieSearch.Application.Tmdb.Models;
 
-namespace MovieSearch.Infrastructure.Services;
+namespace MovieSearch.Application.Services;
 
 public class MovieDetailsService : IMovieDetailsService
 {
-    private readonly TmdbClient _client;
+    private readonly ITmdbClient _client;
     private readonly IMemoryCache _cache;
 
-    public MovieDetailsService(TmdbClient client, IMemoryCache cache)
+    public MovieDetailsService(ITmdbClient client, IMemoryCache cache)
     {
         _client = client;
         _cache = cache;
