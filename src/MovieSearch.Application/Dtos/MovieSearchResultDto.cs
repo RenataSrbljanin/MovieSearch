@@ -1,6 +1,6 @@
 namespace MovieSearch.Application.Models;
 
-public class MovieSearchResult
+public class MovieSearchResultDto
 {
     public int Page { get; set; }
     public int TotalPages { get; set; }

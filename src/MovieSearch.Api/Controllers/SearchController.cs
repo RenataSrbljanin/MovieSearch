@@ -19,9 +19,9 @@ public class SearchController : ControllerBase
     /// Searches for movies and TV shows based on the query.
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(MovieSearchResult), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<MovieSearchResult>> Search(
+    [ProducesResponseType(typeof(MovieSearchResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails),StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<MovieSearchResultDto>> Search(
         [FromQuery] string query,
         [FromQuery] int page = 1,
         [FromQuery] string type = "all",

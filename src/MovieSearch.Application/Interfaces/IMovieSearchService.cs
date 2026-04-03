@@ -4,7 +4,7 @@ namespace MovieSearch.Application.Interfaces;
 
 public interface IMovieSearchService
 {
-    Task<MovieSearchResult> SearchAsync(
+    Task<MovieSearchResultDto> SearchAsync(
         string query,
         int page,
         string type,

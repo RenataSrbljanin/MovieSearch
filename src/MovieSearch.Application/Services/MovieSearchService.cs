@@ -17,7 +17,7 @@ public class MovieSearchService : IMovieSearchService
         _cache = cache;
     }
 
-    public async Task<MovieSearchResult> SearchAsync(
+    public async Task<MovieSearchResultDto> SearchAsync(
         string query,
         int page,
         string type,
@@ -32,7 +32,7 @@ public class MovieSearchService : IMovieSearchService
         var cacheKey = $"search:{language}:{type}:{query}:{page}";// Redosled od opšteg ka specifičnom
 
         // Try get from cache
-        if (_cache.TryGetValue(cacheKey, out MovieSearchResult? cached))
+        if (_cache.TryGetValue(cacheKey, out MovieSearchResultDto? cached))
         {
             return cached!;
         }
@@ -51,7 +51,7 @@ public class MovieSearchService : IMovieSearchService
             .SetAbsoluteExpiration(TimeSpan.FromMinutes(5)) // Podaci ostaju 5 min max
             .SetSlidingExpiration(TimeSpan.FromSeconds(60)); // Ali ako ih niko ne traži 60s, brišu se ranije
 
-        var result = new MovieSearchResult
+        var result = new MovieSearchResultDto
         {
             Page = tmdbResponse.Page,
             TotalPages = tmdbResponse.Total_Pages,
