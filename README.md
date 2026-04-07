@@ -35,12 +35,11 @@ Strict separation between **External API Models** (TMDb responses) and **Interna
 - **Resilience:** Polly (Microsoft.Extensions.Http.Resilience)
 - **Logging:** Serilog
 - **Documentation:** Swagger / OpenAPI
-- **Caching:** IMemoryCache (Local)
+- **Distributed Caching:** Implemented using Redis (Upstash) to ensure scalability and high performance.
 
 ---
 
 ## 📋 Roadmap & Future Enhancements
-- [ ] **Distributed Caching:** Transition from `IMemoryCache` to **Redis** (`IDistributedCache`) for better scalability in multi-node environments.
 - [ ] **Server-side Filtering:** Optimize performance by using specific TMDb endpoints for Movies vs. TV Shows instead of in-memory filtering.
 - [ ] **Rate Limiting:** Protect the API from abuse by implementing global and client-specific rate limits.
 - [ ] **Unit Testing:** Increase code coverage using **xUnit** and **Moq** for the Application layer.
