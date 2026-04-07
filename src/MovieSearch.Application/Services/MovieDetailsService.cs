@@ -1,4 +1,5 @@
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 using MovieSearch.Application.Exceptions;
 using MovieSearch.Application.Interfaces;
 using MovieSearch.Application.Models;
@@ -9,9 +10,9 @@ namespace MovieSearch.Application.Services;
 public class MovieDetailsService : IMovieDetailsService
 {
     private readonly ITmdbClient _client;
-    private readonly IMemoryCache _cache;
+    private readonly IDistributedCache _cache;
 
-    public MovieDetailsService(ITmdbClient client, IMemoryCache cache)
+    public MovieDetailsService(ITmdbClient client, IDistributedCache cache)
     {
         _client = client;
         _cache = cache;
@@ -53,9 +54,13 @@ public class MovieDetailsService : IMovieDetailsService
 
         var cacheKey = $"details:{type}:{id}:{language}";
 
-        if (_cache.TryGetValue(cacheKey, out MovieDetailsDto? cached))
-            return cached!;
-
+        // Čitanje iz Redisa (IDistributedCache koristi stringove) ---
+        var cachedJson = await _cache.GetStringAsync(cacheKey, ct);//_cache.TryGetValue → await _cache.GetStringAsync: Redis je eksterni servis, pa komunikacija mora biti asinhrona (await). Takođe, on ne zna za MovieDetailsDto tip, pa čitam sirovi tekst (JSON) i kasnije ga pretvaram nazad u objekat.
+        if (!string.IsNullOrEmpty(cachedJson))
+        {
+            // Vraćamo objekat iz teksta nazad u C# klasu
+            return JsonSerializer.Deserialize<MovieDetailsDto>(cachedJson)!;//Kada dobijem tekst iz Redisa, pretvaramo ga nazad u moj DTO da bi ostatak aplikacije mogao da radi sa njim
+        }
         try
         {
             // Paralelno pozivanje oba endpointa za bolje performanse i skalabilnost
@@ -65,12 +70,14 @@ public class MovieDetailsService : IMovieDetailsService
             await Task.WhenAll(detailsTask, videosTask);
 
             var result = MapDetails(detailsTask.Result, videosTask.Result, type);
-
-            _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
+            //  Pisanje u Redis
+            var cacheOptions = new DistributedCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
                 SlidingExpiration = TimeSpan.FromMinutes(2)
-            });
+            };
+            var serializedResult = JsonSerializer.Serialize(result);
+            await _cache.SetStringAsync(cacheKey, serializedResult, cacheOptions, ct);// Umesto direktnog slanja objekta u memoriju, sada ga prvo "serijalizujemo" (pretvaramo u JSON string), pa onda šaljemo u Redis.
 
             return result;
         }

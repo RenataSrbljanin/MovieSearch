@@ -1,0 +1,5 @@
+2026-03-24 09:42:17.140 +01:00 [INF] Starting Movie Search API...
+2026-03-24 09:42:18.011 +01:00 [INF] Now listening on: http://localhost:5209
+2026-03-24 09:42:18.024 +01:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-03-24 09:42:18.029 +01:00 [INF] Hosting environment: Development
+2026-03-24 09:42:18.032 +01:00 [INF] Content root path: C:\Users\renat\programiranje\MovieSearch\src\MovieSearch.Api

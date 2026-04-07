@@ -1,4 +1,5 @@
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 using MovieSearch.Application.Interfaces;
 using MovieSearch.Application.Models;
 using MovieSearch.Application.Tmdb.Models;
@@ -8,10 +9,10 @@ namespace MovieSearch.Application.Services;
 public class MovieSearchService : IMovieSearchService
 {
     private readonly ITmdbClient _tmdb;
-    private readonly IMemoryCache _cache;
+    private readonly IDistributedCache _cache;
 
 
-    public MovieSearchService(ITmdbClient tmdb, IMemoryCache cache)
+    public MovieSearchService(ITmdbClient tmdb, IDistributedCache cache)
     {
         _tmdb = tmdb;
         _cache = cache;
@@ -32,9 +33,12 @@ public class MovieSearchService : IMovieSearchService
         var cacheKey = $"search:{language}:{type}:{query}:{page}";// Redosled od opšteg ka specifičnom
 
         // Try get from cache
-        if (_cache.TryGetValue(cacheKey, out MovieSearchResultDto? cached))
+        // Čitanje iz Redisa (asinhrono)
+        var cachedJson = await _cache.GetStringAsync(cacheKey, cancellationToken);
+        if (!string.IsNullOrEmpty(cachedJson))
         {
-            return cached!;
+            // Vraćamo objekat iz JSON-a
+            return JsonSerializer.Deserialize<MovieSearchResultDto>(cachedJson)!;
         }
 
         // 3. If not in cache, call TMDb API
@@ -46,11 +50,6 @@ public class MovieSearchService : IMovieSearchService
             .Select(MapToSummaryDto)
             .ToList();
 
-        // 5. Cache entry sa Sliding Expiration i Absolute Expiration
-        var cacheOptions = new MemoryCacheEntryOptions()
-            .SetAbsoluteExpiration(TimeSpan.FromMinutes(5)) // Podaci ostaju 5 min max
-            .SetSlidingExpiration(TimeSpan.FromSeconds(60)); // Ali ako ih niko ne traži 60s, brišu se ranije
-
         var result = new MovieSearchResultDto
         {
             Page = tmdbResponse.Page,
@@ -58,10 +57,17 @@ public class MovieSearchService : IMovieSearchService
             TotalResults = tmdbResponse.Total_Results,
             Results = results
         };
-        _cache.Set(cacheKey, result, cacheOptions);
+        // 5. Pisanje u Redis
+        var cacheOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
+            SlidingExpiration = TimeSpan.FromSeconds(60)
+        };
+        var serializedResult = JsonSerializer.Serialize(result);
+        await _cache.SetStringAsync(cacheKey, serializedResult, cacheOptions, cancellationToken);
 
         return result;
-        
+
     }
     // Pomoćna metoda za čistiji kod
     private MovieSummaryDto MapToSummaryDto(TmdbSearchItem r) => new MovieSummaryDto

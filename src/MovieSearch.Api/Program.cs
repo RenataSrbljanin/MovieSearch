@@ -24,7 +24,15 @@ try
 
     // 3. Konfiguracija i Infrastruktura
     builder.Services.Configure<TmdbOptions>(builder.Configuration.GetSection("Tmdb"));
-    builder.Services.AddMemoryCache();
+    // builder.Services.AddMemoryCache();
+    // Redis Cache - umesto lokalnog memorijskog cache-a, koristim Redis koji je eksterni servis, skalabilan i deljen između više instanci aplikacije
+    var redisConn = builder.Configuration.GetConnectionString("RedisConnection");
+
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConn;
+        options.InstanceName = "MovieSearch_";
+    });
 
     // 4. HttpClient za TMDb - Typed Client (Rešava Socket Exhaustion)
     // Izvlačim opcije ranije da bih ih koristila u konfiguraciji klijenta
@@ -43,12 +51,12 @@ try
     .AddStandardResilienceHandler(options =>  // OVDE DODAJEM POLLY!
 {
     // Ovde fino podesavam pravila:
-   
+
     options.Retry.MaxRetryAttempts = 3;  // 1. Retry: Ako ne uspe, probaj opet 3 puta
     options.Retry.Delay = TimeSpan.FromSeconds(2); // Sačekaj 2s pre ponovnog pokušaja
     options.Retry.BackoffType = DelayBackoffType.Exponential; // Svaki sledeći put čekaj duže (2s, 4s, 8s)
 
-    // 2. Circuit Breaker: Ako TMDB konstantno greši, "isključim osigurač" na neko vreme (30sec)
+    // 2. Circuit Breaker: Ako TMDB konstantno greši, "isključi osigurač" na neko vreme (30sec)
     // da ne mučim server koji je očigledno "mrtav"-ovo cuva resurse mog servera
     options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
 });
