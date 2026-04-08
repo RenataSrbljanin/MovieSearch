@@ -15,3 +15,4 @@
 # Logs
 /logs/
 *.log
+src/MovieSearch.Api/logs/
