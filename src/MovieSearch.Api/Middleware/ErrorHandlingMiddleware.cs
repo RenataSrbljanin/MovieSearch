@@ -1,17 +1,18 @@
 using System.Net;
 using System.Text.Json;
 using MovieSearch.Application.Exceptions;
-using Serilog;
 
 namespace MovieSearch.Api.Middleware;
 
 public class ErrorHandlingMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<ErrorHandlingMiddleware> _logger;
 
-    public ErrorHandlingMiddleware(RequestDelegate next)
+    public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task Invoke(HttpContext context)
@@ -22,22 +23,34 @@ public class ErrorHandlingMiddleware
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "An unexpected error occurred during the request: {Path}.");
+            // loguje i Exception (sa celim Stack Trace-om) i lepu poruku sa putanjom za developera
+            _logger.LogError(ex, "An unexpected error occurred during the request to {Path}. Error: {Message}",
+            context.Request.Path,
+            ex.Message);
+            // ovde pozivam metodu koja filtrira odgovor za korisnika
             await HandleExceptionAsync(context, ex);
         }
     }
+
     private static Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        var code = HttpStatusCode.InternalServerError;
-        var result = "An unexpected error occurred.";
+        var code = HttpStatusCode.InternalServerError; // Default 500
 
+        // Mapiranje mojih custom izuzetaka na HTTP kodove
         if (exception is NotFoundException) code = HttpStatusCode.NotFound;
         else if (exception is BadRequestException) code = HttpStatusCode.BadRequest;
 
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = (int)code;
 
-        var response = new { error = exception.Message ?? result };
-        return context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        var errorMessage = exception.Message ?? "An unexpected error occurred.";
+
+        var result = JsonSerializer.Serialize(new
+        {
+            error = errorMessage,
+            statusCode = (int)code
+            // StackTrace ide u logove (preko _logger-a), a NIKADA ovde ka korisniku!
+        });
+        return context.Response.WriteAsync(result);
     }
 }
