@@ -68,7 +68,15 @@ try
     // 6. API Controllers
     builder.Services.AddControllers();
 
-    // 7. OpenAPI / Swagger
+    // 7. Registracija Health Check-ova
+    builder.Services.AddHealthChecks()
+        // Dodajem proveru za Redis koristeći moj Connection String
+        .AddRedis(
+            builder.Configuration.GetConnectionString("RedisConnection")!,
+            name: "redis_check",
+            tags: new[] { "ready" });
+
+    // 8. OpenAPI / Swagger
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(options =>
     {
@@ -91,7 +99,7 @@ try
 
     var app = builder.Build();
 
-    // 8. Middleware Pipeline (Redosled je bitan!)
+    // 9. Middleware Pipeline (Redosled je bitan!)
     app.UseMiddleware<ErrorHandlingMiddleware>(); // Prvi, da uhvati sve greške ispod
 
     // Swagger samo u developmentu
@@ -104,6 +112,7 @@ try
     app.UseHttpsRedirection();
     app.UseAuthorization();
     app.MapControllers();
+    app.MapHealthChecks("/health");  // Mapiranje rute za Health Check
 
     app.Run();
 }
