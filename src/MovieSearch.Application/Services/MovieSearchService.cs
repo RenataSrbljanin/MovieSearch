@@ -41,13 +41,25 @@ public class MovieSearchService : IMovieSearchService
             return JsonSerializer.Deserialize<MovieSearchResultDto>(cachedJson)!;
         }
 
-        // 3. If not in cache, call TMDb API
-        var tmdbResponse = await _tmdb.SearchMultiAsync(query, page, language, cancellationToken);
+        /// 3. If not in cache, fetch from TMDb using server-side filtering to ensure accurate pagination and results
+        TmdbSearchResponse tmdbResponse;
 
-        // 4. Mapiranje rezultata - filtriranje po tipu i mapiranje u DTO
+        switch (type.ToLower())
+        {
+            case "movie":
+                tmdbResponse = await _tmdb.SearchMoviesAsync(query, page, language, cancellationToken);
+                break;
+            case "tv":
+                tmdbResponse = await _tmdb.SearchTvAsync(query, page, language, cancellationToken);
+                break;
+            default:
+                tmdbResponse = await _tmdb.SearchMultiAsync(query, page, language, cancellationToken);
+                break;
+        }
+
+        // 4. Mapiranje rezultata je sada prostije jer TMDB već šalje samo ono što nam treba
         var results = tmdbResponse.Results
-            .Where(r => type == "all" || r.Media_Type.Equals(type, StringComparison.OrdinalIgnoreCase))
-            .Select(MapToSummaryDto)
+            .Select(r => MapToSummaryDto(r, type)) // Dodala sam 'type' kao parametar
             .ToList();
 
         var result = new MovieSearchResultDto
@@ -67,13 +79,14 @@ public class MovieSearchService : IMovieSearchService
         await _cache.SetStringAsync(cacheKey, serializedResult, cacheOptions, cancellationToken);
 
         return result;
-
     }
+    
     // Pomoćna metoda za čistiji kod
-    private MovieSummaryDto MapToSummaryDto(TmdbSearchItem r) => new MovieSummaryDto
+    private MovieSummaryDto MapToSummaryDto(TmdbSearchItem r, string requestedType) => new MovieSummaryDto
     {
         Id = r.Id.ToString(),
-        Type = r.Media_Type,
+        // Ako r.Media_Type nedostaje, koristi requestedType koji dolazi iz parametara metode, jer već filtriramo po tipu na nivou TMDB klijenta
+        Type = !string.IsNullOrEmpty(r.Media_Type) ? r.Media_Type : requestedType,
         Title = r.Title ?? r.Name ?? "Unknown",
         Overview = r.Overview ?? "",
         PosterUrl = !string.IsNullOrEmpty(r.Poster_Path)

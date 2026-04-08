@@ -1,119 +1,80 @@
-🎬 MovieSearch API (.NET 9)
-A professional, production-ready .NET 9 Web API for searching movies and TV shows, integrated with The Movie Database (TMDb) API. This project demonstrates advanced software engineering practices, focusing on performance, security, and scalability.
+# 🎬 MovieSearch API (.NET 9)
 
-🌟 Key Features & Architecture
+A professional, production-ready .NET 9 Web API for searching movies and TV shows, integrated with [The Movie Database (TMDb) API](https://www.themoviedb.org/). This project demonstrates advanced software engineering practices, focusing on performance, security, and scalability.
 
-  🏛️ Clean Architecture Implementation
-  The project follows Clean Architecture principles to ensure a high degree of decoupling:
+---
 
-  Api Layer: Global Error Handling Middleware, Health Checks, and REST Controllers.
+## 🌟 Key Features & Architecture
 
-  Application Layer: Business logic, DTO mapping, and Service abstractions.
+### 🏛️ Clean Architecture Implementation
+The project follows **Clean Architecture** principles to ensure a high degree of decoupling:
+* **Api Layer:** Global Error Handling Middleware, Health Checks, and REST Controllers.
+* **Application Layer:** Business logic, DTO mapping, and Service abstractions.
+* **Infrastructure Layer:** High-performance integration handling external dependencies:
+    * **Typed HTTP Clients:** Developed a robust `ITmdbClient` that encapsulates all logic for external communication. It supports specialized endpoints (`/search/movie`, `/search/tv`, `/search/multi`) to ensure **server-side filtering** and **accurate pagination**.
+    * **Redis Configuration (Distributed Cache):** Implemented using **Upstash Redis** to move away from limited in-memory caching. This ensures the application is stateless and ready for horizontal scaling.
+    * **Resilience & Fault Tolerance:** Integrated **Polly** within the HTTP pipeline, providing automatic retries and circuit-breaking.
 
-  Infrastructure Layer: Typed HTTP Clients and Redis configuration.
+### 🎯 Server-Side Filtering & Accurate Pagination
+Optimized the search functionality by moving away from in-memory filtering:
+* **Precise Results:** The API communicates with specific TMDb endpoints based on the user's request.
+* **Pagination Integrity:** Ensures paged results are always consistent and full, resolving issues where in-memory filtering would return incomplete pages.
 
-  🚀 Distributed Caching (Redis)
-  Instead of basic in-memory caching, this API uses Redis (via Upstash).
+### 🚀 Distributed Caching (Redis)
+* **Horizontal Scalability:** Multiple API instances share the same cache via Redis.
+* **Optimized Performance:** Drastically reduces latency and TMDb API rate-limit consumption.
 
-  Horizontal Scalability: Multiple API instances share the same cache.
+### 🛡️ Resilience & Fault Tolerance (Polly)
+* **Standard Resilience Handler:** Includes **Retry, Circuit Breaker, and Rate Limiting** to ensure the app remains responsive even when external services "stutter".
 
-  Optimized Performance: Drastically reduces latency and TMDb API rate-limit consumption by storing frequent search results.
+### 🧪 Robust Testing Suite
+* **Frameworks:** xUnit & Moq.
+* **Coverage:** Validates caching logic, API fallback mechanisms, and data transformation.
 
-  🛡️ Resilience & Fault Tolerance (Polly)
-  Integrated Microsoft.Extensions.Http.Resilience to handle transient failures:
+### 📜 Secure Error Handling & Logging
+* **Global Middleware:** Captures all exceptions, returning standardized JSON responses.
+* **Serilog:** Structured logging for internal tracking while keeping public responses safe from information leakage.
 
-  Standard Resilience Handler: Includes Retry, Circuit Breaker, and Rate Limiting to ensure the app stays alive even when external services "stutter".
+### 🐳 Containerization (Docker)
+* **Multi-stage Build:** Uses SDK image for compiling and a lightweight ASP.NET runtime image for production.
+* **Port Configuration:** Pre-configured to run on port **8080**.
 
-  🧪 Robust Testing Suite
-  The core business logic is fully protected by Unit Tests:
+---
 
-  Frameworks: xUnit & Moq.
+## 🛠️ Tech Stack
+* **Framework:** .NET 9 (ASP.NET Core)
+* **Caching:** Redis (Upstash)
+* **Resilience:** Polly
+* **Logging:** Serilog
+* **Testing:** xUnit, Moq
+* **Documentation:** Swagger / OpenAPI
+* **Containerization:** Docker
 
-  Coverage: Validates caching logic, API fallback mechanisms, and data transformation.
+---
 
-  🩺 Monitoring & Health Checks
-  Implemented Health Checks for real-time monitoring:
+## 🚀 Getting Started
 
-  /health endpoint provides status reports for both the API and the Redis connection.
+### Prerequisites
+* .NET 9 SDK
+* TMDb API Key
+* Upstash Redis account
 
-  📜 Secure Error Handling & Logging
-  Global Middleware: Captures all exceptions, returning standardized JSON responses.
+### Security & Configuration
+This project uses **User Secrets** to protect sensitive credentials.
 
-  Security-First Logging: Uses Serilog to log full stack traces internally while keeping the public API responses clean and safe from information leakage.
+1. **Initialize User Secrets:**
+   ```bash
+   dotnet user-secrets init --project src/MovieSearch.Api
 
-  🐳 Containerization (Docker)
-  The application is fully containerized using a multi-stage Dockerfile.
 
-  Optimized Build: Uses the SDK image for compiling and the lightweight ASP.NET runtime image for production, ensuring a small and fast container footprint.
+## 📋 Roadmap & Future Enhancements
 
-  Port Configuration: Pre-configured to run on port 8080.
+* CI/CD Pipeline: Implement GitHub Actions for automated building, testing, and Docker image deployment.
 
-🛠️ Tech Stack
+* Authentication & Security: Integrate JWT-based authentication or IdentityServer for protected endpoints.
 
-  Framework: .NET 9 (ASP.NET Core)
+* Advanced Monitoring: Deploy Prometheus and Grafana dashboards for real-time API metrics and Redis health visualization.
 
-  Caching: Redis (Upstash)
+* Orchestration: Add Kubernetes (K8s) manifests for automated scaling and self-healing deployments.
 
-  Resilience: Polly
-
-  Logging: Serilog (File & Console)
-
-  Testing: xUnit, Moq
-
-  API Documentation: Swagger / OpenAPI
-
-  Containerization: Docker
-
-🚀 Getting Started
-
-Prerequisites
-
-  .NET 9 SDK
-
-  TMDb API Key
-
-  Upstash Redis account (for caching)
-
-  Security & Configuration
-  This project uses User Secrets to prevent sensitive data from being committed to version control.
-
-Initialize User Secrets:
-  Bash
-  dotnet user-secrets init --project src/MovieSearch.Api
-
-Set your credentials:
-  Bash
-  dotnet user-secrets set "Tmdb:ApiToken" "YOUR_TMDB_TOKEN" --project src/MovieSearch.Api
-  dotnet user-secrets set "ConnectionStrings:RedisConnection" "YOUR_REDIS_URL" --project src/MovieSearch.Api
-
-Installation & Run
-
-Clone the repository.
-
-Run the application:
-  Bash
-  dotnet run --project src/MovieSearch.Api
-
-Execute tests:
-  Bash
-  dotnet test
-
-Running with Docker:
-
-    Build the image:
-
-    Bash
-    docker build -t moviesearch-api .
-    Run the container (make sure to pass your secrets as environment variables):
-
-    Bash
-    docker run -p 8080:8080 \
-      -e "Tmdb__ApiToken=YOUR_TOKEN" \
-      -e "ConnectionStrings__RedisConnection=YOUR_REDIS_URL" \
-      moviesearch-api
-
-📋 Roadmap
-[ ] CI/CD Pipeline: GitHub Actions for automated testing and deployment.
-[ ] Kubernetes Manifests: Adding K8s YAML files for orchestration.
-[ ] Authentication: Implementing JWT-based security for protected endpoints.
-[ ] Monitoring Dashboard: Integrating Prometheus/Grafana for health metrics.
+* API Versioning: Implement formal API versioning (v1, v2) to ensure backward compatibility for future updates.      

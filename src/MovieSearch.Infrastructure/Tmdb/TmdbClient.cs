@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 using MovieSearch.Application.Tmdb.Models;
 namespace MovieSearch.Infrastructure.Tmdb;
 
-public class TmdbClient: ITmdbClient
+public class TmdbClient : ITmdbClient
 {
     private readonly HttpClient _httpClient;
     private readonly JsonSerializerOptions _jsonOptions;
@@ -50,4 +50,16 @@ public class TmdbClient: ITmdbClient
 
     public async Task<TmdbVideosResponse> GetTvVideosAsync(string id, string language, CancellationToken ct)
     => await GetAsync<TmdbVideosResponse>($"tv/{id}/videos?language={language}", ct);
+
+    public async Task<TmdbSearchResponse> SearchMoviesAsync(string query, int page, string language, CancellationToken cancellationToken)
+    {
+        // Koristim "search/movie" umesto "search/multi"
+        return await GetAsync<TmdbSearchResponse>($"search/movie?query={Uri.EscapeDataString(query)}&page={page}&language={language}", cancellationToken);
+    }
+
+    public async Task<TmdbSearchResponse> SearchTvAsync(string query, int page, string language, CancellationToken cancellationToken)
+    {
+        // Koristim "search/tv" umesto "search/multi"
+        return await GetAsync<TmdbSearchResponse>($"search/tv?query={Uri.EscapeDataString(query)}&page={page}&language={language}", cancellationToken);
+    }
 }
