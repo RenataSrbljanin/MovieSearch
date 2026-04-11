@@ -77,4 +77,6 @@ This project uses **User Secrets** to protect sensitive credentials.
 
 * Orchestration: Add Kubernetes (K8s) manifests for automated scaling and self-healing deployments.
 
-* API Versioning: Implement formal API versioning (v1, v2) to ensure backward compatibility for future updates.      
+* API Versioning: Implement formal API versioning (v1, v2) to ensure backward compatibility for future updates.    
+
+* Webhook - Event-driven cache invalidation
