@@ -35,6 +35,13 @@ Optimized the search functionality by moving away from in-memory filtering:
 * **Global Middleware:** Captures all exceptions, returning standardized JSON responses.
 * **Serilog:** Structured logging for internal tracking while keeping public responses safe from information leakage.
 
+###  🔐 Secure Authentication (JWT)
+* **Identity Service:** Implemented a dedicated service for handling user authentication and JWT generation, following the Separation of Concerns principle.
+
+* **Protected Endpoints:** Secured sensitive API routes using the [Authorize] attribute.
+
+* **Swagger Integration:** Configured Swagger UI to support JWT Bearer tokens, allowing for seamless testing of protected endpoints.
+
 ### 🐳 Containerization (Docker)
 * **Multi-stage Build:** Uses SDK image for compiling and a lightweight ASP.NET runtime image for production.
 * **Port Configuration:** Pre-configured to run on port **8080**.
@@ -70,8 +77,6 @@ This project uses **User Secrets** to protect sensitive credentials.
 ## 📋 Roadmap & Future Enhancements
 
 * CI/CD Pipeline: Implement GitHub Actions for automated building, testing, and Docker image deployment.
-
-* Authentication & Security: Integrate JWT-based authentication or IdentityServer for protected endpoints.
 
 * Advanced Monitoring: Deploy Prometheus and Grafana dashboards for real-time API metrics and Redis health visualization.
 
