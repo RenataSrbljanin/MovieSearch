@@ -29,18 +29,22 @@ Optimized the search functionality by moving away from in-memory filtering:
 
 ### 🧪 Robust Testing Suite
 * **Frameworks:** xUnit & Moq.
-* **Coverage:** Validates caching logic, API fallback mechanisms, and data transformation.
+* **Coverage:** 
+    * **Identity Services:** Validating JWT generation, Claims (Sub, Jti, Issuer), and Refresh Token rotation logic.
+    * **Controllers:** Ensuring correct HTTP responses (200 OK, 401 Unauthorized) and proper API contract adherence.
+    * **Infrastructure:** Caching logic, API fallback mechanisms, and data transformation.
 
 ### 📜 Secure Error Handling & Logging
 * **Global Middleware:** Captures all exceptions, returning standardized JSON responses.
 * **Serilog:** Structured logging for internal tracking while keeping public responses safe from information leakage.
 
-###  🔐 Secure Authentication (JWT)
-* **Identity Service:** Implemented a dedicated service for handling user authentication and JWT generation, following the Separation of Concerns principle.
-
-* **Protected Endpoints:** Secured sensitive API routes using the [Authorize] attribute.
-
-* **Swagger Integration:** Configured Swagger UI to support JWT Bearer tokens, allowing for seamless testing of protected endpoints.
+### 🔐 Advanced Secure Authentication (JWT & Refresh Tokens)
+Implemented a robust authentication system designed for stateless, distributed environments:
+* **Dual-Token System:** Leverages short-lived Access Tokens for security and long-lived Refresh Tokens for a seamless user experience.
+* **Distributed Token Store (Redis):** Refresh Tokens are persisted in **Upstash Redis** with an absolute expiration (TTL), ensuring the API remains stateless and ready for horizontal scaling.
+* **One-Time Use Policy:** Implemented a secure rotation strategy where Refresh Tokens are revoked immediately upon use (One-Time Use), mitigating potential replay attacks.
+* **Cryptographic Security:** Utilizes high-entropy, cryptographically generated keys for JWT signing, managed via .NET User Secrets.
+* **Swagger Integration:** Fully configured Swagger UI to support JWT Bearer tokens, allowing for seamless testing of protected endpoints directly from the browser.
 
 ### 🐳 Containerization (Docker)
 * **Multi-stage Build:** Uses SDK image for compiling and a lightweight ASP.NET runtime image for production.

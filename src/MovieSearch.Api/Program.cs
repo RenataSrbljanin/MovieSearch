@@ -9,6 +9,7 @@ using MovieSearch.Application.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using MovieSearch.Application.Common;
 
 // 1. Konfiguracija Seriloga pre svega ostalog
 Log.Logger = new LoggerConfiguration()
@@ -28,7 +29,8 @@ try
 
     // 3. Konfiguracija i Infrastruktura
     builder.Services.Configure<TmdbOptions>(builder.Configuration.GetSection("Tmdb"));
-    // builder.Services.AddMemoryCache();
+    // Dodajem tipiziranu konfiguraciju za JWT opcije
+    builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
     // Redis Cache - umesto lokalnog memorijskog cache-a, koristim Redis koji je eksterni servis, skalabilan i deljen između više instanci aplikacije
     var redisConn = builder.Configuration.GetConnectionString("RedisConnection");
 
@@ -141,7 +143,9 @@ try
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+            // Postavljam ClockSkew na nulu kako bi istek tokena bio trenutan i precizan
+            ClockSkew = TimeSpan.Zero
         };
     });
 

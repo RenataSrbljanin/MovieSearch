@@ -2,6 +2,9 @@ using MovieSearch.Application.Dtos;
 
 public interface IIdentityService
 {
-    // Metoda koja vraća JWT string ako su kredencijali ispravni, inače null
-    string? Authenticate(LoginRequestDto request);
+    // Ažuriram metodu da vraća AuthResponseDto koji sada sadrži oba tokena
+    Task<AuthResponseDto?> AuthenticateAsync(LoginRequestDto request);
+    
+    // Dodajem metodu za validaciju i generisanje novog para tokena na osnovu starog refresh tokena
+    Task<AuthResponseDto?> RefreshTokenAsync(RefreshRequestDto request);
 }   
