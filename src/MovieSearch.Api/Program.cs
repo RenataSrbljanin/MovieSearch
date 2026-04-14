@@ -5,6 +5,11 @@ using MovieSearch.Api.Middleware;
 using System.Net.Http.Headers;
 using Polly;
 using MovieSearch.Application.Services;
+// Dodatni using-ovi za JWT
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using MovieSearch.Application.Common;
 
 // 1. Konfiguracija Seriloga pre svega ostalog
 Log.Logger = new LoggerConfiguration()
@@ -24,7 +29,8 @@ try
 
     // 3. Konfiguracija i Infrastruktura
     builder.Services.Configure<TmdbOptions>(builder.Configuration.GetSection("Tmdb"));
-    // builder.Services.AddMemoryCache();
+    // Dodajem tipiziranu konfiguraciju za JWT opcije
+    builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
     // Redis Cache - umesto lokalnog memorijskog cache-a, koristim Redis koji je eksterni servis, skalabilan i deljen između više instanci aplikacije
     var redisConn = builder.Configuration.GetConnectionString("RedisConnection");
 
@@ -62,6 +68,7 @@ try
 });
 
     // 5. Registracija servisa
+    builder.Services.AddScoped<IIdentityService, IdentityService>();
     builder.Services.AddScoped<IMovieSearchService, MovieSearchService>();
     builder.Services.AddScoped<IMovieDetailsService, MovieDetailsService>();
 
@@ -95,14 +102,60 @@ try
         {
             options.IncludeXmlComments(xmlPath);
         }
+        // Uvodim JWT autentifikaciju u Swagger da bih mogla testirati zaštićene endpoint-e direktno iz UI-a
+        // 1. Definišem kako će Swagger tretirati JWT token
+        options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+            Scheme = "Bearer",
+            BearerFormat = "JWT",
+            In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+            Description = "Unesite samo JWT token (bez 'Bearer' prefiksa)."
+        });
+
+        // 2. Kažem Swagger-u da primeni tu definiciju na sve endpointe
+        options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
     });
 
+    // 9. JWT - Authentication & Authorization
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+            // Postavljam ClockSkew na nulu kako bi istek tokena bio trenutan i precizan
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
+    builder.Services.AddAuthorization();
     var app = builder.Build();
 
-    // 9. Middleware Pipeline (Redosled je bitan!)
+    // 10. Middleware Pipeline (Redosled je bitan!)
     app.UseMiddleware<ErrorHandlingMiddleware>(); // Prvi, da uhvati sve greške ispod
 
-    // Swagger samo u developmentu
+    // 11. Swagger samo u developmentu
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();
@@ -110,6 +163,7 @@ try
     }
 
     app.UseHttpsRedirection();
+    app.UseAuthentication(); // Pre Authorization!
     app.UseAuthorization();
     app.MapControllers();
     app.MapHealthChecks("/health");  // Mapiranje rute za Health Check
