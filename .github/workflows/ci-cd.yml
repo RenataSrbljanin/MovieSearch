@@ -9,7 +9,8 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -18,7 +19,7 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '9.0.x'
-      # Prvo proveravamo da li se kod uopšte može kompajlirati u čistom okruženju, pa tek onda pokrećemo testove
+      # Prvo proveravam da li se kod uopšte može kompajlirati u čistom okruženju, pa tek onda pokrećem testove
     - name: Restore dependencies
       run: dotnet restore MovieSearch.sln
 
