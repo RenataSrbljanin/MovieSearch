@@ -9,7 +9,7 @@ A professional, production-ready .NET 9 Web API for searching movies and TV show
 
 ### 🏛️ Clean Architecture Implementation
 The project follows **Clean Architecture** principles to ensure a high degree of decoupling:
-* **Api Layer:** Global Error Handling Middleware, Health Checks, and REST Controllers.
+* **Api Layer:** Global Error Handling Middleware, Health Checks, **API Versioning (v1, v2)**, and REST Controllers.
 * **Application Layer:** Business logic, DTO mapping, and Service abstractions.
 * **Infrastructure Layer:** High-performance integration handling external dependencies:
     * **Typed HTTP Clients:** Developed a robust `ITmdbClient` that encapsulates all logic for external communication. It supports specialized endpoints (`/search/movie`, `/search/tv`, `/search/multi`) to ensure **server-side filtering** and **accurate pagination**.
@@ -47,6 +47,12 @@ Implemented a robust authentication system designed for stateless, distributed e
 * **Cryptographic Security:** Utilizes high-entropy, cryptographically generated keys for JWT signing, managed via .NET User Secrets.
 * **Swagger Integration:** Fully configured Swagger UI to support JWT Bearer tokens, allowing for seamless testing of protected endpoints directly from the browser.
 
+### 🚥 API Versioning
+The API implements formal versioning to ensure backward compatibility and smooth transitions for future updates:
+* **URL-Based Versioning:** All endpoints are prefixed with the version number (e.g., `/api/v1/auth/login`).
+* **Format:** Uses the `v{version:apiVersion}` constraint for clean and predictable routing.
+* **Extensibility:** Built with `Asp.Versioning`, allowing multiple versions of the same controller to coexist during transition periods.
+
 ### 🐳 Containerization (Docker)
 * **Multi-stage Build:** Uses SDK image for compiling and a lightweight ASP.NET runtime image for production.
 * **Port Configuration:** Pre-configured to run on port **8080**.
@@ -66,6 +72,7 @@ Fully automated development lifecycle managed via GitHub Actions:
 * **Logging:** Serilog
 * **Testing:** xUnit, Moq
 * **Documentation:** Swagger / OpenAPI
+* **Versioning:** Asp.Versioning (MVC & ApiExplorer)
 * **CI/CD:** GitHub Actions
 * **Containerization:** Docker
 
@@ -87,8 +94,6 @@ This project uses **User Secrets** to protect sensitive credentials.
 
 
 ## 📋 Roadmap & Future Enhancements
-
-* API Versioning: Implement formal API versioning (v1, v2) to ensure backward compatibility for future updates.    
 
 * Webhook - Event-driven cache invalidation
 

@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using MovieSearch.Application.Common;
+using Asp.Versioning;
 
 // 1. Konfiguracija Seriloga pre svega ostalog
 Log.Logger = new LoggerConfiguration()
@@ -150,6 +151,18 @@ try
     });
 
     builder.Services.AddAuthorization();
+
+    builder.Services.AddApiVersioning(options =>
+    {
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.ReportApiVersions = true;
+    }).AddApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VVV";
+        options.SubstituteApiVersionInUrl = true;
+    });
+
     var app = builder.Build();
 
     // 10. Middleware Pipeline (Redosled je bitan!)
