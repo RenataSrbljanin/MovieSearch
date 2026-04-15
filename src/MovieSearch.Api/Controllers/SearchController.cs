@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieSearch.Application.Interfaces;
@@ -5,9 +6,10 @@ using MovieSearch.Application.Models;
 
 namespace MovieSearch.Api.Controllers;
 
+[ApiVersion("1.0")]
 [Authorize]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class SearchController : ControllerBase
 {
     private readonly IMovieSearchService _searchService;

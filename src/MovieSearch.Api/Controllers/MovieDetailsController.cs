@@ -1,11 +1,13 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using MovieSearch.Application.Interfaces;
 using MovieSearch.Application.Models;
 
 namespace MovieSearch.Api.Controllers;
 
+[ApiVersion("1.0")]
 [ApiController]
-[Route("api/details")]
+[Route("api/v{version:apiVersion}/details")]
 public class MovieDetailsController : ControllerBase
 {
     private readonly IMovieDetailsService _service;
