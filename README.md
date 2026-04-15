@@ -1,4 +1,5 @@
 # 🎬 MovieSearch API (.NET 9)
+![Build Status](https://github.com/RenataSrbljanin/MovieSearch/actions/workflows/ci-cd.yml/badge.svg)
 
 A professional, production-ready .NET 9 Web API for searching movies and TV shows, integrated with [The Movie Database (TMDb) API](https://www.themoviedb.org/). This project demonstrates advanced software engineering practices, focusing on performance, security, and scalability.
 
@@ -50,6 +51,12 @@ Implemented a robust authentication system designed for stateless, distributed e
 * **Multi-stage Build:** Uses SDK image for compiling and a lightweight ASP.NET runtime image for production.
 * **Port Configuration:** Pre-configured to run on port **8080**.
 
+### ⚙️ CI/CD & Automation (GitHub Actions)
+Fully automated development lifecycle managed via GitHub Actions:
+* **Continuous Integration:** Every push and pull request triggers an automated suite of unit and integration tests.
+* **Automated Quality Gate:** Build and test execution ensures that no breaking changes reach the main branch.
+* **Environment Simulation:** The pipeline securely injects cryptographic keys and API tokens via GitHub Secrets to mirror production environments.
+* **Docker Image Validation:** Verifies the multi-stage build process and container integrity as part of the pipeline.
 ---
 
 ## 🛠️ Tech Stack
@@ -59,6 +66,7 @@ Implemented a robust authentication system designed for stateless, distributed e
 * **Logging:** Serilog
 * **Testing:** xUnit, Moq
 * **Documentation:** Swagger / OpenAPI
+* **CI/CD:** GitHub Actions
 * **Containerization:** Docker
 
 ---
@@ -80,12 +88,10 @@ This project uses **User Secrets** to protect sensitive credentials.
 
 ## 📋 Roadmap & Future Enhancements
 
-* CI/CD Pipeline: Implement GitHub Actions for automated building, testing, and Docker image deployment.
+* API Versioning: Implement formal API versioning (v1, v2) to ensure backward compatibility for future updates.    
+
+* Webhook - Event-driven cache invalidation
 
 * Advanced Monitoring: Deploy Prometheus and Grafana dashboards for real-time API metrics and Redis health visualization.
 
 * Orchestration: Add Kubernetes (K8s) manifests for automated scaling and self-healing deployments.
-
-* API Versioning: Implement formal API versioning (v1, v2) to ensure backward compatibility for future updates.    
-
-* Webhook - Event-driven cache invalidation

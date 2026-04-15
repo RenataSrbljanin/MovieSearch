@@ -7,11 +7,16 @@ COPY ["MovieSearch.sln", "./"]
 COPY ["src/MovieSearch.Api/MovieSearch.Api.csproj", "src/MovieSearch.Api/"]
 COPY ["src/MovieSearch.Application/MovieSearch.Application.csproj", "src/MovieSearch.Application/"]
 COPY ["src/MovieSearch.Infrastructure/MovieSearch.Infrastructure.csproj", "src/MovieSearch.Infrastructure/"]
+COPY ["tests/MovieSearch.Tests/MovieSearch.Tests.csproj", "tests/MovieSearch.Tests/"]
 
 RUN dotnet restore
 
 # Kopiraj ostatak koda i uradi publish
 COPY . .
+
+# build puca ako testovi ne prođu, pa ih pokrećem pre publish-a
+RUN dotnet test "tests/MovieSearch.Tests/MovieSearch.Tests.csproj" -c Release --no-restore
+
 WORKDIR "/src/src/MovieSearch.Api"
 RUN dotnet publish "MovieSearch.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 

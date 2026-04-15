@@ -1,0 +1,39 @@
+name: MovieSearch CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 9
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+      # Prvo proveravamo da li se kod uopšte može kompajlirati u čistom okruženju, pa tek onda pokrećemo testove
+    - name: Restore dependencies
+      run: dotnet restore MovieSearch.sln
+
+    - name: Build
+      run: dotnet build MovieSearch.sln --no-restore --configuration Release
+
+    - name: Run Tests
+      env:
+        # Mapiranje GitHub Secrets u environment varijable koje .NET prepoznaje
+        Tmdb__ApiToken: ${{ secrets.TMDB_API_TOKEN }}
+        ConnectionStrings__RedisConnection: ${{ secrets.REDIS_CONNECTION }}
+        Jwt__Key: ${{ secrets.JWT_KEY }}
+      run: dotnet test MovieSearch.sln --no-build --configuration Release --verbosity normal
+
+    - name: Build Docker Image
+      # Ovaj korak proverava da li se moj Dockerfile ispravno build-uje
+      # Koristim github.sha za jedinstveni tag slike
+      run: docker build -t moviesearch-api:${{ github.sha }} .
