@@ -11,6 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using MovieSearch.Application.Common;
 using Asp.Versioning;
+using MovieSearch.Infrastructure.Caching;
 
 // 1. Konfiguracija Seriloga pre svega ostalog
 Log.Logger = new LoggerConfiguration()
@@ -72,6 +73,7 @@ try
     builder.Services.AddScoped<IIdentityService, IdentityService>();
     builder.Services.AddScoped<IMovieSearchService, MovieSearchService>();
     builder.Services.AddScoped<IMovieDetailsService, MovieDetailsService>();
+    builder.Services.AddScoped<ICacheService, RedisCacheService>();
 
     // 6. API Controllers
     builder.Services.AddControllers();
