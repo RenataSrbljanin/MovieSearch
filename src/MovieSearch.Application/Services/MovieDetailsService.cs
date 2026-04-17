@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
 using MovieSearch.Application.Exceptions;
 using MovieSearch.Application.Interfaces;
@@ -10,9 +9,9 @@ namespace MovieSearch.Application.Services;
 public class MovieDetailsService : IMovieDetailsService
 {
     private readonly ITmdbClient _client;
-    private readonly IDistributedCache _cache;
+    private readonly ICacheService _cache;
 
-    public MovieDetailsService(ITmdbClient client, IDistributedCache cache)
+    public MovieDetailsService(ITmdbClient client, ICacheService cache)
     {
         _client = client;
         _cache = cache;
@@ -40,7 +39,7 @@ public class MovieDetailsService : IMovieDetailsService
                     ct);
     }
 
-    // Univerzalna metoda koja hendluje i filmove i serije
+    // Univerzalna metoda koja hendluje i filmove i serije uz korišćenje apstrahovanog keš servisa
     private async Task<MovieDetailsDto> GetWithCachingAsync(
         string id,
         string language,
@@ -49,44 +48,44 @@ public class MovieDetailsService : IMovieDetailsService
         Func<string, string, CancellationToken, Task<TmdbVideosResponse>> videosFunc,
         CancellationToken ct)
     {
+        // 1. Validacija ID formata (Security & Integrity check)
         if (!int.TryParse(id, out _))
             throw new BadRequestException($"Invalid {type} ID format.");
 
         var cacheKey = $"details:{type}:{id}:{language}";
 
-        // Čitanje iz Redisa (IDistributedCache koristi stringove) ---
-        var cachedJson = await _cache.GetStringAsync(cacheKey, ct);//_cache.TryGetValue → await _cache.GetStringAsync: Redis je eksterni servis, pa komunikacija mora biti asinhrona (await). Takođe, on ne zna za MovieDetailsDto tip, pa čitam sirovi tekst (JSON) i kasnije ga pretvaram nazad u objekat.
-        if (!string.IsNullOrEmpty(cachedJson))
+        // 2. Pokušaj dobavljanja iz keša. ICacheService sada interno hendluje 
+        // asinhronost i deserijalizaciju iz JSON-a u MovieDetailsDto.
+        var cachedResult = await _cache.GetAsync<MovieDetailsDto>(cacheKey, ct);
+        if (cachedResult != null)
         {
-            // Vraćamo objekat iz teksta nazad u C# klasu
-            return JsonSerializer.Deserialize<MovieDetailsDto>(cachedJson)!;//Kada dobijem tekst iz Redisa, pretvaramo ga nazad u moj DTO da bi ostatak aplikacije mogao da radi sa njim
+            return cachedResult;
         }
+
         try
         {
-            // Paralelno pozivanje oba endpointa za bolje performanse i skalabilnost
+            // 3. Paralelno pozivanje TMDb API endpointa (Details + Videos)
+            // Koristim Task.WhenAll da bih smanjila ukupno vreme čekanja (Latency)
             var detailsTask = detailsFunc(id, language, ct);
             var videosTask = videosFunc(id, language, ct);
 
             await Task.WhenAll(detailsTask, videosTask);
 
+            // 4. Mapiranje TMDb modela u moj DTO
             var result = MapDetails(detailsTask.Result, videosTask.Result, type);
-            //  Pisanje u Redis
-            var cacheOptions = new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-                SlidingExpiration = TimeSpan.FromMinutes(2)
-            };
-            var serializedResult = JsonSerializer.Serialize(result);
-            await _cache.SetStringAsync(cacheKey, serializedResult, cacheOptions, ct);// Umesto direktnog slanja objekta u memoriju, sada ga prvo "serijalizujemo" (pretvaramo u JSON string), pa onda šaljemo u Redis.
+
+            // 5. Upisivanje u Redis. Logika o trajanju keša (TTL) je enkapsulirana u servisu,
+            // što ovaj kod čini fokusiranim isključivo na tok podataka.
+            await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10), ct);
 
             return result;
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
+            // 6. Specifično hvatanje 404 greške i transformacija u domen-specifičnu NotFoundException
             throw new NotFoundException($"{type} with ID {id} not found.");
         }
     }
-
     private MovieDetailsDto MapDetails(TmdbDetailsResponse details, TmdbVideosResponse videos, string type)
     {
         return new MovieDetailsDto

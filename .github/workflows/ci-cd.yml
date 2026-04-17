@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, "feat/**" ]
 
 jobs:
   build-and-test:
@@ -32,6 +32,7 @@ jobs:
         Tmdb__ApiToken: ${{ secrets.TMDB_API_TOKEN }}
         ConnectionStrings__RedisConnection: ${{ secrets.REDIS_CONNECTION }}
         Jwt__Key: ${{ secrets.JWT_KEY }}
+        WebhookOptions__ApiKey: ${{ secrets.WEBHOOK_API_KEY }}
       run: dotnet test MovieSearch.sln --no-build --configuration Release --verbosity normal
 
     - name: Build Docker Image

@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Caching.Distributed;
-using System.Text.Json;
 using MovieSearch.Application.Interfaces;
 using MovieSearch.Application.Models;
 using MovieSearch.Application.Tmdb.Models;
@@ -9,10 +7,10 @@ namespace MovieSearch.Application.Services;
 public class MovieSearchService : IMovieSearchService
 {
     private readonly ITmdbClient _tmdb;
-    private readonly IDistributedCache _cache;
+    private readonly ICacheService _cache;
 
 
-    public MovieSearchService(ITmdbClient tmdb, IDistributedCache cache)
+    public MovieSearchService(ITmdbClient tmdb, ICacheService cache)
     {
         _tmdb = tmdb;
         _cache = cache;
@@ -34,14 +32,13 @@ public class MovieSearchService : IMovieSearchService
 
         // Try get from cache
         // Čitanje iz Redisa (asinhrono)
-        var cachedJson = await _cache.GetStringAsync(cacheKey, cancellationToken);
-        if (!string.IsNullOrEmpty(cachedJson))
+        var cachedResult = await _cache.GetAsync<MovieSearchResultDto>(cacheKey, cancellationToken);
+        if (cachedResult != null)
         {
-            // Vraćamo objekat iz JSON-a
-            return JsonSerializer.Deserialize<MovieSearchResultDto>(cachedJson)!;
+            return cachedResult;
         }
 
-        /// 3. If not in cache, fetch from TMDb using server-side filtering to ensure accurate pagination and results
+        // 3. Ako podaci nisu u kešu, dobavljamo ih sa TMDb-a koristeći server-side filtering da osiguramo tačnu paginaciju i rezultate
         TmdbSearchResponse tmdbResponse;
 
         switch (type.ToLower())
@@ -69,18 +66,13 @@ public class MovieSearchService : IMovieSearchService
             TotalResults = tmdbResponse.Total_Results,
             Results = results
         };
+        
         // 5. Pisanje u Redis
-        var cacheOptions = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
-            SlidingExpiration = TimeSpan.FromSeconds(60)
-        };
-        var serializedResult = JsonSerializer.Serialize(result);
-        await _cache.SetStringAsync(cacheKey, serializedResult, cacheOptions, cancellationToken);
+        await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(5), cancellationToken);
 
         return result;
     }
-    
+
     // Pomoćna metoda za čistiji kod
     private MovieSummaryDto MapToSummaryDto(TmdbSearchItem r, string requestedType) => new MovieSummaryDto
     {

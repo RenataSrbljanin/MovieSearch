@@ -13,8 +13,9 @@ The project follows **Clean Architecture** principles to ensure a high degree of
 * **Application Layer:** Business logic, DTO mapping, and Service abstractions.
 * **Infrastructure Layer:** High-performance integration handling external dependencies:
     * **Typed HTTP Clients:** Developed a robust `ITmdbClient` that encapsulates all logic for external communication. It supports specialized endpoints (`/search/movie`, `/search/tv`, `/search/multi`) to ensure **server-side filtering** and **accurate pagination**.
-    * **Redis Configuration (Distributed Cache):** Implemented using **Upstash Redis** to move away from limited in-memory caching. This ensures the application is stateless and ready for horizontal scaling.
-    * **Resilience & Fault Tolerance:** Integrated **Polly** within the HTTP pipeline, providing automatic retries and circuit-breaking.
+    * **Generic Caching Abstraction**: Implemented a custom ICacheService to decouple the Application layer from specific caching providers. This architecture allows for seamless transitions between different distributed cache engines without affecting business logic.
+    * **Redis Configuration (Distributed Cache):** Powered by **Upstash Redis** and implemented by `RedisCacheService` to move away from limited in-memory caching. This ensures the application is stateless, supports complex object serialization, and is fully optimized for horizontal scaling and cloud-native environments.
+    * **Resilience & Fault Tolerance:** Integrated **Polly** within the HTTP pipeline, providing automatic retries and circuit-breaking to handle transient failures of external APIs gracefully..
 
 ### 🎯 Server-Side Filtering & Accurate Pagination
 Optimized the search functionality by moving away from in-memory filtering:
@@ -53,6 +54,19 @@ The API implements formal versioning to ensure backward compatibility and smooth
 * **Format:** Uses the `v{version:apiVersion}` constraint for clean and predictable routing.
 * **Extensibility:** Built with `Asp.Versioning`, allowing multiple versions of the same controller to coexist during transition periods.
 
+### 🔗 Webhooks & Cache Invalidation
+The API supports event-driven cache invalidation to ensure data consistency:
+* **Endpoint:** `POST /api/v1/Webhooks/cache-invalidate/{type}/{id}/{language}`
+* **Security:** Protected via `X-Api-Key` header validation.
+* **Functionality:** Manually clears specific Redis keys for movies or TV shows, forcing the API to fetch fresh data from TMDB on the next request.
+
+#### 🔑 Environment Variables & Secrets
+To run this project locally, you need to configure the following secrets:
+* `Tmdb:ApiToken`: Your TMDB Bearer Token.
+* `WebhookOptions:ApiKey`: A custom secret key for protecting webhook endpoints.
+
+Use `dotnet user-secrets set` to configure these values during development.
+
 ### 🐳 Containerization (Docker)
 * **Multi-stage Build:** Uses SDK image for compiling and a lightweight ASP.NET runtime image for production.
 * **Port Configuration:** Pre-configured to run on port **8080**.
@@ -67,7 +81,8 @@ Fully automated development lifecycle managed via GitHub Actions:
 
 ## 🛠️ Tech Stack
 * **Framework:** .NET 9 (ASP.NET Core)
-* **Caching:** Redis (Upstash)
+* **Security:** JWT Authentication (Bearer) & API Key Authorization (Webhooks).
+* **Caching:** Redis with a custom generic `ICacheService` abstraction (Upstash)
 * **Resilience:** Polly
 * **Logging:** Serilog
 * **Testing:** xUnit, Moq
@@ -92,10 +107,14 @@ This project uses **User Secrets** to protect sensitive credentials.
    ```bash
    dotnet user-secrets init --project src/MovieSearch.Api
 
+#### 🔑 Environment Variables & Secrets
+To run this project locally, you need to configure the following secrets:
+* `Tmdb:ApiToken`: Your TMDB Bearer Token.
+* `WebhookOptions:ApiKey`: A custom secret key for protecting webhook endpoints.
+
+Use `dotnet user-secrets set` to configure these values during development.
 
 ## 📋 Roadmap & Future Enhancements
-
-* Webhook - Event-driven cache invalidation
 
 * Advanced Monitoring: Deploy Prometheus and Grafana dashboards for real-time API metrics and Redis health visualization.
 
