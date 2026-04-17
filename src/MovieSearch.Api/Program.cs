@@ -116,22 +116,47 @@ try
             In = Microsoft.OpenApi.Models.ParameterLocation.Header,
             Description = "Unesite samo JWT token (bez 'Bearer' prefiksa)."
         });
-
+        // 1.1. Dodajem i API Key definiciju za Webhook endpoint
+        options.AddSecurityDefinition("ApiKey", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+        {
+            Description = "Unesite vaš API ključ za Webhook zaštitu",
+            In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+            Name = "X-Api-Key",
+            Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+            Scheme = "ApiKeyScheme"
+        });
         // 2. Kažem Swagger-u da primeni tu definiciju na sve endpointe
         options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
         {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
             {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                new Microsoft.OpenApi.Models.OpenApiSecurityScheme
                 {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
+                    Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                    {
+                        Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
+                },
+                Array.Empty<string>()
             },
-            Array.Empty<string>()
-        }
-    });
+                {
+                    new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                    {
+                        Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                        {
+                            Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                            Id = "ApiKey"
+                        }
+                    },
+                    Array.Empty<string>()
+                }
+        });
+
+        // govori Swaggeru kako da tretira rute koje imaju {version}
+        options.DocInclusionPredicate((version, desc) =>
+        {
+            return true;
+        });
     });
 
     // 9. JWT - Authentication & Authorization
