@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: moviesearch-api
+  labels:
+    app: moviesearch-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: moviesearch-api
+  template:
+    metadata:
+      labels:
+        app: moviesearch-api
+    spec:
+      containers:
+      - name: moviesearch-api
+        image: moviesearch-api:v1  # Mora biti isto ime kao ono što sam build-ovala
+        imagePullPolicy: IfNotPresent  # Never # Kaže K8s-u: "Gledaj u moj lokalni Docker, ne na internet"
+        ports:
+        - containerPort: 8080
+        env:
+        # Govorimo .NET-u da radi u Production/Development modu 
+        # (Swagger će biti isključen u Production modu)
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+
+        # 1. TMDB Podaci
+        - name: Tmdb__ApiToken
+          valueFrom:
+            secretKeyRef:
+              name: moviesearch-secrets
+              key: TMDB_TOKEN
+
+        # 2. Redis - Moj kod koristi "RedisConnection" u GetConnectionString-u
+        - name: ConnectionStrings__RedisConnection
+          valueFrom:
+            secretKeyRef:
+              name: moviesearch-secrets
+              key: REDIS_CONN
+
+        # 3. JWT Podaci
+        - name: Jwt__Issuer
+          value: "MovieSearchApi" # Može direktno kao ovde ili iz secreta
+        - name: Jwt__Audience
+          value: "MovieSearchUsers"
+        - name: Jwt__Key
+          valueFrom:
+            secretKeyRef:
+              name: moviesearch-secrets
+              key: JWT_KEY
+
+        # 4. Webhook Podaci
+        - name: WebhookOptions__ApiKey
+          valueFrom:
+            secretKeyRef:
+              name: moviesearch-secrets
+              key: WEBHOOK_KEY

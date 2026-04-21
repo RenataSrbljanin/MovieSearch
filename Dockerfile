@@ -27,6 +27,8 @@ COPY --from=build /app/publish .
 
 # Ekspozuj port na kojem aplikacija sluša
 EXPOSE 8080
-ENV ASPNETCORE_URLS=http://+:8080
+
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
+ENV ASPNETCORE_ENVIRONMENT=Production
 
 ENTRYPOINT ["dotnet", "MovieSearch.Api.dll"]
