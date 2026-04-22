@@ -1,0 +1,18 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: moviesearch-api-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: moviesearch-api
+  minReplicas: 2 # Nikad ne pada ispod 2 kopije (High Availability)
+  maxReplicas: 10 # Maksimalno 10 kopija kad je velika gužva
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50 # Ako prosečan CPU pređe 50%, pravi novi Pod

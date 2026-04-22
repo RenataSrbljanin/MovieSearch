@@ -16,13 +16,22 @@ spec:
     spec:
       containers:
       - name: moviesearch-api
-        image: moviesearch-api:v1  # Mora biti isto ime kao ono što sam build-ovala
-        imagePullPolicy: IfNotPresent  # Never # Kaže K8s-u: "Gledaj u moj lokalni Docker, ne na internet"
+        image: moviesearch-api:v1
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
+        
+        # Ovde dodajem resurse - ključno za HPA
+        resources:
+          requests:
+            cpu: "100m"      # Minimalno rezerviše 0.1 CPU jezgra
+            memory: "128Mi"  # Minimalno rezerviše 128MB RAM-a
+          limits:
+            cpu: "500m"      # Maksimalno sme da povuče 0.5 jezgra
+            memory: "512Mi"  # Maksimalno sme da povuče 512MB RAM-a
+
         env:
-        # Govorimo .NET-u da radi u Production/Development modu 
-        # (Swagger će biti isključen u Production modu)
+        # ASPNETCORE_ENVIRONMENT setovan na Development da bi video Swagger
         - name: ASPNETCORE_ENVIRONMENT
           value: "Development"
 
@@ -33,7 +42,7 @@ spec:
               name: moviesearch-secrets
               key: TMDB_TOKEN
 
-        # 2. Redis - Moj kod koristi "RedisConnection" u GetConnectionString-u
+        # 2. Redis Connection
         - name: ConnectionStrings__RedisConnection
           valueFrom:
             secretKeyRef:
@@ -42,7 +51,7 @@ spec:
 
         # 3. JWT Podaci
         - name: Jwt__Issuer
-          value: "MovieSearchApi" # Može direktno kao ovde ili iz secreta
+          value: "MovieSearchApi"
         - name: Jwt__Audience
           value: "MovieSearchUsers"
         - name: Jwt__Key
