@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: moviesearch-api
+  labels:
+    app: moviesearch-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: moviesearch-api
+  template:
+    metadata:
+      labels:
+        app: moviesearch-api
+    spec:
+      containers:
+      - name: moviesearch-api
+        image: moviesearch-api:v1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        
+        # Ovde dodajem resurse - ključno za HPA
+        resources:
+          requests:
+            cpu: "100m"      # Minimalno rezerviše 0.1 CPU jezgra
+            memory: "128Mi"  # Minimalno rezerviše 128MB RAM-a
+          limits:
+            cpu: "500m"      # Maksimalno sme da povuče 0.5 jezgra
+            memory: "512Mi"  # Maksimalno sme da povuče 512MB RAM-a
+
+        env:
+        # ASPNETCORE_ENVIRONMENT setovan na Development da bi video Swagger
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+
+        # 1. TMDB Podaci
+        - name: Tmdb__ApiToken
+          valueFrom:
+            secretKeyRef:
+              name: moviesearch-secrets
+              key: TMDB_TOKEN
+
+        # 2. Redis Connection
+        - name: ConnectionStrings__RedisConnection
+          valueFrom:
+            secretKeyRef:
+              name: moviesearch-secrets
+              key: REDIS_CONN
+
+        # 3. JWT Podaci
+        - name: Jwt__Issuer
+          value: "MovieSearchApi"
+        - name: Jwt__Audience
+          value: "MovieSearchUsers"
+        - name: Jwt__Key
+          valueFrom:
+            secretKeyRef:
+              name: moviesearch-secrets
+              key: JWT_KEY
+
+        # 4. Webhook Podaci
+        - name: WebhookOptions__ApiKey
+          valueFrom:
+            secretKeyRef:
+              name: moviesearch-secrets
+              key: WEBHOOK_KEY

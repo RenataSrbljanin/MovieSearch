@@ -60,12 +60,8 @@ The API supports event-driven cache invalidation to ensure data consistency:
 * **Security:** Protected via `X-Api-Key` header validation.
 * **Functionality:** Manually clears specific Redis keys for movies or TV shows, forcing the API to fetch fresh data from TMDB on the next request.
 
-#### 🔑 Environment Variables & Secrets
-To run this project locally, you need to configure the following secrets:
-* `Tmdb:ApiToken`: Your TMDB Bearer Token.
-* `WebhookOptions:ApiKey`: A custom secret key for protecting webhook endpoints.
-
-Use `dotnet user-secrets set` to configure these values during development.
+### 🔑 Local Security & Configuration
+This project uses **User Secrets** to protect sensitive credentials during development.
 
 ### 🐳 Containerization (Docker)
 * **Multi-stage Build:** Uses SDK image for compiling and a lightweight ASP.NET runtime image for production.
@@ -77,6 +73,13 @@ Fully automated development lifecycle managed via GitHub Actions:
 * **Automated Quality Gate:** Build and test execution ensures that no breaking changes reach the main branch.
 * **Environment Simulation:** The pipeline securely injects cryptographic keys and API tokens via GitHub Secrets to mirror production environments.
 * **Docker Image Validation:** Verifies the multi-stage build process and container integrity as part of the pipeline.
+
+### ☸️ Cloud-Native & Kubernetes Orchestration
+The application is fully prepared for modern cloud environments with a complete Kubernetes manifest suite:
+* **Orchestrated Deployment:** Managed via K8s with strategic resource requests and limits.
+* **Horizontal Pod Autoscaler (HPA):** Configured to automatically scale from **2 to 10 replicas** based on real-time CPU utilization.
+* **Professional Routing (Ingress):** Implemented Nginx Ingress to provide a clean domain-based entry point (`moviesearch.local`).
+* **Self-Healing & High Availability:** Multi-replica setup ensures zero downtime and automatic recovery.
 ---
 
 ## 🛠️ Tech Stack
@@ -90,32 +93,70 @@ Fully automated development lifecycle managed via GitHub Actions:
 * **Versioning:** Asp.Versioning (MVC & ApiExplorer)
 * **CI/CD:** GitHub Actions
 * **Containerization:** Docker
+* **Orchestration:** Kubernetes (K8s)
+* **Ingress/Routing:** Nginx Ingress Controller
 
 ---
 
 ## 🚀 Getting Started
 
-### Prerequisites
-* .NET 9 SDK
-* TMDb API Key
-* Upstash Redis account
+## 🚀 Prerequisites
 
-### Security & Configuration
-This project uses **User Secrets** to protect sensitive credentials.
+To run this project in all modes (Local and Kubernetes), you will need the following:
+
+* **.NET 9 SDK** (for local development and building)
+* **Docker Desktop** with **Kubernetes enabled** (for containerization and orchestration)
+* **TMDb API Key** (to access movie and TV show data)
+* **Upstash Redis Account** (for distributed caching)
+* **Metrics Server** (installed within the K8s cluster, required for HPA to function)
+
+### 🔑 Local Security & Configuration
+This project uses **User Secrets** to protect sensitive credentials during development.
 
 1. **Initialize User Secrets:**
-   ```bash
-   dotnet user-secrets init --project src/MovieSearch.Api
+   ```bash 
+dotnet user-secrets init --project src/MovieSearch.Api
 
-#### 🔑 Environment Variables & Secrets
-To run this project locally, you need to configure the following secrets:
-* `Tmdb:ApiToken`: Your TMDB Bearer Token.
-* `WebhookOptions:ApiKey`: A custom secret key for protecting webhook endpoints.
+2. **Configure User Secrets:**  
+dotnet user-secrets set "Tmdb:ApiToken" "your_tmdb_token"
+dotnet user-secrets set "ConnectionStrings:RedisConnection" "your_upstash_url"
+dotnet user-secrets set "Jwt:Key" "your_secret_key"
+dotnet user-secrets set "WebhookOptions:ApiKey" "your_webhook_api_key"
 
-Use `dotnet user-secrets set` to configure these values during development.
+## ☸️ Kubernetes Deployment (Local)
+To run the full infrastructure locally on Docker Desktop:
+
+1. **Create Kubernetes Secrets**
+Inject your sensitive data into the cluster:
+
+PowerShell
+kubectl create secret generic moviesearch-secrets `
+  --from-literal=TMDB_TOKEN="your_token" `
+  --from-literal=REDIS_CONN="your_upstash_url" `
+  --from-literal=JWT_KEY="your_key" `
+  --from-literal=WEBHOOK_KEY="your_webhook_key"
+
+2. **Configure Local DNS**
+Add the following line to your hosts file (C:\Windows\System32\drivers\etc\hosts):
+
+Plaintext
+127.0.0.1  moviesearch.local
+
+3. **Deploy to Cluster**
+Apply all manifests from the k8s/ directory:
+
+PowerShell
+kubectl apply -f k8s/
+
+4. **Verify Access**
+Health Check: http://moviesearch.local/health
+
+Swagger UI: http://moviesearch.local/swagger
+
+Monitoring: Run kubectl get hpa to see real-time scaling metrics.
 
 ## 📋 Roadmap & Future Enhancements
 
 * Advanced Monitoring: Deploy Prometheus and Grafana dashboards for real-time API metrics and Redis health visualization.
 
-* Orchestration: Add Kubernetes (K8s) manifests for automated scaling and self-healing deployments.
+
