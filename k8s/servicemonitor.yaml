@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: moviesearch-api-monitor
+  namespace: monitoring # Monitor živi gde i Prometheus
+  labels:
+    release: prometheus-stack # Važno: da bi ga Prometheus pronašao
+spec:
+  namespaceSelector:
+    matchNames:
+      - default # Traži moj API u default namespace-u
+  selector:
+    matchLabels:
+      app: moviesearch-api # Mora se poklapati sa labelom u mom service.yaml
+  endpoints:
+  - port: http # Ime porta definisano u mom Service-u
+    path: /metrics
+    interval: 15s

@@ -25,6 +25,15 @@ Optimized the search functionality by moving away from in-memory filtering:
 ### 🚀 Distributed Caching (Redis)
 * **Horizontal Scalability:** Multiple API instances share the same cache via Redis.
 * **Optimized Performance:** Drastically reduces latency and TMDb API rate-limit consumption.
+* **Manual Invalidation** via **Webhooks**.
+
+## 🚀 Features & Infrastructure
+- **Observability & Monitoring:** 
+    * **Prometheus Integration:** Custom middleware for capturing HTTP request duration, count, and error rates. Exposed via `/metrics` endpoint using `prometheus-net`.
+    * **Grafana Dashboards:** Ready-to-use visualizations for real-time tracking of memory usage (`dotnet-counters`), request latency, and throughput.
+    * **ServiceMonitor (Operator pattern):** Automated discovery of the API by Prometheus within the Kubernetes cluster.
+- **Health Checks:** Comprehensive health monitoring (API, Redis, and Database).
+- **Containerization:** Fully Dockerized and orchestrated with Kubernetes (K8s).
 
 ### 🛡️ Resilience & Fault Tolerance (Polly)
 * **Standard Resilience Handler:** Includes **Retry, Circuit Breaker, and Rate Limiting** to ensure the app remains responsive even when external services "stutter".
@@ -80,6 +89,7 @@ The application is fully prepared for modern cloud environments with a complete 
 * **Horizontal Pod Autoscaler (HPA):** Configured to automatically scale from **2 to 10 replicas** based on real-time CPU utilization.
 * **Professional Routing (Ingress):** Implemented Nginx Ingress to provide a clean domain-based entry point (`moviesearch.local`).
 * **Self-Healing & High Availability:** Multi-replica setup ensures zero downtime and automatic recovery.
+* **Monitoring as Code:** Includes a `ServiceMonitor` manifest, enabling the Prometheus Operator to automatically scrape metrics without manual configuration.
 ---
 
 ## 🛠️ Tech Stack
@@ -100,7 +110,7 @@ The application is fully prepared for modern cloud environments with a complete 
 
 ## 🚀 Getting Started
 
-## 🚀 Prerequisites
+### 🚀 Prerequisites
 
 To run this project in all modes (Local and Kubernetes), you will need the following:
 
@@ -108,13 +118,14 @@ To run this project in all modes (Local and Kubernetes), you will need the follo
 * **Docker Desktop** with **Kubernetes enabled** (for containerization and orchestration)
 * **TMDb API Key** (to access movie and TV show data)
 * **Upstash Redis Account** (for distributed caching)
+* **Kube-Prometheus-Stack** (installed via Helm in the 'monitoring' namespace)
 * **Metrics Server** (installed within the K8s cluster, required for HPA to function)
 
 ### 🔑 Local Security & Configuration
 This project uses **User Secrets** to protect sensitive credentials during development.
 
 1. **Initialize User Secrets:**
-   ```bash 
+   ``Bash 
 dotnet user-secrets init --project src/MovieSearch.Api
 
 2. **Configure User Secrets:**  
@@ -123,40 +134,93 @@ dotnet user-secrets set "ConnectionStrings:RedisConnection" "your_upstash_url"
 dotnet user-secrets set "Jwt:Key" "your_secret_key"
 dotnet user-secrets set "WebhookOptions:ApiKey" "your_webhook_api_key"
 
-## ☸️ Kubernetes Deployment (Local)
+### ☸️ Kubernetes Deployment (Local)
 To run the full infrastructure locally on Docker Desktop:
 
 1. **Create Kubernetes Secrets**
 Inject your sensitive data into the cluster:
 
-PowerShell
-kubectl create secret generic moviesearch-secrets `
-  --from-literal=TMDB_TOKEN="your_token" `
-  --from-literal=REDIS_CONN="your_upstash_url" `
-  --from-literal=JWT_KEY="your_key" `
+```PowerShell
+kubectl create secret generic moviesearch-secrets \
+  --from-literal=TMDB_TOKEN="your_token" \
+  --from-literal=REDIS_CONN="your_upstash_url" \
+  --from-literal=JWT_KEY="your_key" \
   --from-literal=WEBHOOK_KEY="your_webhook_key"
+  ```
 
 2. **Configure Local DNS**
 Add the following line to your hosts file (C:\Windows\System32\drivers\etc\hosts):
 
-Plaintext
+```Plaintext
 127.0.0.1  moviesearch.local
+```
 
 3. **Deploy to Cluster**
 Apply all manifests from the k8s/ directory:
 
-PowerShell
+```PowerShell
 kubectl apply -f k8s/
+```
+4. **Verify Access & Monitoring**
+Once the stack is up, you can verify the status and monitoring data using these endpoints:
 
-4. **Verify Access**
-Health Check: http://moviesearch.local/health
+API Health: http://moviesearch.local/health (Aggregated status of API, Redis, and Database)
 
-Swagger UI: http://moviesearch.local/swagger
+Swagger UI: http://moviesearch.local/swagger (Interactive documentation)
 
-Monitoring: Run kubectl get hpa to see real-time scaling metrics.
+Prometheus Metrics: http://moviesearch.local/metrics (Scrapable data for Prometheus)
+
+Auto-scaling (HPA): Run `kubectl get hpa`  to see real-time CPU-based scaling metrics.
+
+Cluster Targets: Check http://localhost:9090/targets (via port-forward) to ensure the ServiceMonitor is active.
+
+### 📊 Accessing Monitoring Dashboards
+Once the application is deployed to Kubernetes, you can access the monitoring stack using port-forwarding:
+
+ **Prometheus UI (Targets & Queries):**
+
+   ```PowerShell'
+   kubectl port-forward svc/prometheus-stack-kube-prom-prometheus 9090:9090 -n monitoring
+   ```
+   Access at: http://localhost:9090/targets
+  ```PowerShell'
+  kubectl port-forward deployment/prometheus-stack-grafana 3000:3000 -n monitoring
+   ```
+   Access at: http://localhost:3000 (Default credentials: admin / prom-operator)
+  ```PowerShell'
+   kubectl port-forward svc/moviesearch-service 8081:80
+   ```
+   Check raw metrics at: http://localhost:8081/metrics
+   
 
 ## 📋 Roadmap & Future Enhancements
 
-* Advanced Monitoring: Deploy Prometheus and Grafana dashboards for real-time API metrics and Redis health visualization.
+### 🚀 Phase 2: Hybrid Data Persistence & Caching
+Evolving the project`s infrastructure by introducing permanent storage layers while **maintaining and enhancing the existing Redis caching strategy**. The goal is to move from ephemeral storage to a robust, multi-tier data architecture.
+
+#### 🐘 PostgreSQL (Structured Identity & Core Data)
+*   **Role:** Primary Source of Truth for relational data.
+*   **Implementation:** Moving away from hardcoded "admin" logic to a secure, persistent user management system using **Entity Framework Core**.
+*   **Key Features:** User profiles, encrypted credentials, and personalized "Watchlists".
+*   **Development:** Managed via **Docker Compose** for a consistent local development environment.
+
+#### 🍃 MongoDB (Unstructured Metadata Archive)
+*   **Role:** High-performance document store for semi-structured data.
+*   **Implementation:** Storing rich movie metadata and TMDB API responses to minimize external API latency and rate-limiting issues.
+*   **Synergy:** Acts as a secondary persistent cache for complex objects that don`t fit well in a relational schema.
+
+#### ⚡ Redis (Distributed Cache - *Existing*)
+*   **Role:** High-speed volatile storage.
+*   **Current Use:** Managing **Refresh Tokens** and session-based data.
+*   **Enhancement:** Redis will continue to serve as the primary caching layer to ensure sub-millisecond response times, working in tandem with PostgreSQL and MongoDB to reduce database load.
+
+### 🛠 Infrastructure & Orchestration
+- [ ] **Multi-Container Setup:** Create a `docker-compose.yml` to orchestrate the API, Redis, and PostgreSQL for seamless onboarding.
+- [ ] **Kubernetes Evolution:** Update `k8s` manifests to include `StatefulSets` for databases and `Secrets` for secure connection string management.
+- [ ] **Repository Pattern Refactor:** Decouple data access logic in the `Infrastructure` layer to support multiple data sources.
+
+### 🔍 Advanced Features
+- [ ] **Smart Tiered Caching:** Implement a logic where the app checks Redis (L1), then MongoDB (L2), and finally TMDB API (L3).
+- [ ] **Audit Logging:** Store incoming webhook events in PostgreSQL for historical tracking and debugging.
 
 
