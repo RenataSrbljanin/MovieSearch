@@ -5,6 +5,7 @@ using MovieSearch.Api.Middleware;
 using System.Net.Http.Headers;
 using Polly;
 using MovieSearch.Application.Services;
+using Prometheus;
 // Dodatni using-ovi za JWT
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -192,6 +193,10 @@ try
 
     var app = builder.Build();
 
+    // Prvo metrike, onda sve ostalo (Swagger, Auth, Routing...)
+    app.UseHttpMetrics();
+    // OBAVEZNO: Omogućavam ruting pre nego što krenem u Middleware
+    app.UseRouting();
     // 10. Middleware Pipeline (Redosled je bitan!)
     app.UseMiddleware<ErrorHandlingMiddleware>(); // Prvi, da uhvati sve greške ispod
 
@@ -206,6 +211,7 @@ try
     app.UseAuthentication(); // Pre Authorization!
     app.UseAuthorization();
     app.MapControllers();
+    app.MapMetrics().AllowAnonymous(); // Eksponira /metrics endpoint za Prometheus
     app.MapHealthChecks("/health");  // Mapiranje rute za Health Check
 
     app.Run();

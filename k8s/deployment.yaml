@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: moviesearch-api
-        image: moviesearch-api:v1
+        image: moviesearch-api:v3
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
